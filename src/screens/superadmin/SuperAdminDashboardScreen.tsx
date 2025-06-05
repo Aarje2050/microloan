@@ -29,6 +29,8 @@ import { formatCurrency, formatDate } from '../../utils';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
 import { Platform } from 'react-native';
+import { UniversalSignOutService } from '../../services/auth/universalSignOutService';
+
 
 
 export const SuperAdminDashboardScreen: React.FC = () => {
@@ -71,30 +73,10 @@ const {
     }
   };
 
-  /**
-   * Handle logout functionality
-   */
-  const handleLogout = async () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Sign Out', 
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await AuthService.signOut();
-            } catch (error) {
-              console.error('Logout error:', error);
-            }
-          }
-        }
-      ]
-    );
-  };
-
+//  Handle logout functionality
+const handleLogout = async () => {
+  UniversalSignOutService.handleSignOut();
+};
   /**
    * Get status color based on system health
    */

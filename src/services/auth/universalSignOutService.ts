@@ -1,101 +1,113 @@
 // src/services/auth/universalSignOutService.ts
-// Universal sign out service that works across all platforms and user types
+// Enterprise-grade universal sign out with proper cleanup
 
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import { AuthService } from './authService';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export class UniversalSignOutService {
   
   /**
-   * Professional sign out with proper cleanup
-   */
-  static async performSignOut(): Promise<boolean> {
-    try {
-      // Step 1: Sign out from Supabase
-      await AuthService.signOut();
-      
-      // Step 2: Clear all local storage (ensure complete cleanup)
-      await this.clearAllLocalData();
-      
-      // Step 3: Clear React Query cache if available
-      // This will be handled by the auth context when user state changes
-      
-      return true;
-    } catch (error) {
-      console.error('Sign out error:', error);
-      
-      // Even if Supabase signout fails, clear local data
-      await this.clearAllLocalData();
-      
-      Alert.alert(
-        'Sign Out',
-        'You have been signed out. Please restart the app if you experience any issues.',
-        [{ text: 'OK' }]
-      );
-      
-      return true; // Return true to force sign out
-    }
-  }
-
-  /**
-   * Clear all local storage data
-   */
-  private static async clearAllLocalData(): Promise<void> {
-    try {
-      // Clear auth tokens and user data
-      const keysToRemove = [
-        'sb-auth-token',
-        'supabase.auth.token',
-        'user-session',
-        'user-profile',
-        '@user-data',
-        // Add any other keys your app uses
-      ];
-
-      await Promise.all(keysToRemove.map(key => AsyncStorage.removeItem(key)));
-
-      
-    } catch (error) {
-      console.warn('Error clearing local data:', error);
-    }
-  }
-
-  /**
-   * Show professional sign out confirmation
-   */
-  static showSignOutConfirmation(onConfirm: () => void): void {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
-      [
-        { 
-          text: 'Cancel', 
-          style: 'cancel' 
-        },
-        { 
-          text: 'Sign Out', 
-          style: 'destructive',
-          onPress: onConfirm
-        }
-      ],
-      { cancelable: true }
-    );
-  }
-
-  /**
-   * Universal sign out handler for any component
+   * Enterprise sign out with proper token cleanup
    */
   static async handleSignOut(): Promise<void> {
-    this.showSignOutConfirmation(async () => {
-      const success = await this.performSignOut();
-      
-      if (success) {
-        // Force app reload on web for complete cleanup
-        if (typeof window !== 'undefined') {
-          window.location.reload();
-        }
+    
+    // Use native Alert for mobile, browser confirm for web
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm('Are you sure you want to sign out?');
+      if (confirmed) {
+        await this.performSignOut();
       }
-    });
+    } else {
+      Alert.alert(
+        'Sign Out',
+        'Are you sure you want to sign out?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Sign Out', 
+            style: 'destructive',
+            onPress: () => this.performSignOut()
+          }
+        ]
+      );
+    }
+  }
+
+  /**
+   * Perform the actual sign out with proper cleanup
+   */
+  private static async performSignOut(): Promise<void> {
+    try {
+      // Step 1: Clear Supabase auth tokens specifically
+      await this.clearSupabaseTokens();
+      
+      // Step 2: Sign out from Supabase
+      await AuthService.signOut();
+      
+      // Step 3: Clear any remaining app-specific data
+      await this.clearAppData();
+      
+    } catch (error) {
+      console.warn('Sign out error:', error);
+      // Even if signout fails, clear local data
+      await this.clearSupabaseTokens();
+      await this.clearAppData();
+    } finally {
+      // Step 4: Force app reload for clean state
+      this.forceAppReload();
+    }
+  }
+
+  /**
+   * Clear Supabase-specific auth tokens
+   */
+  private static async clearSupabaseTokens(): Promise<void> {
+    if (typeof localStorage !== 'undefined') {
+      // Clear Supabase auth tokens (enterprise way - specific keys only)
+      const supabaseKeys = [
+        'sb-localhost-auth-token',
+        'sb-auth-token', 
+        'supabase.auth.token',
+        'sb-' + window.location.hostname + '-auth-token'
+      ];
+      
+      supabaseKeys.forEach(key => {
+        localStorage.removeItem(key);
+      });
+    }
+
+    if (typeof sessionStorage !== 'undefined') {
+      // Clear session storage
+      sessionStorage.clear();
+    }
+  }
+
+  /**
+   * Clear app-specific data (add your app's storage keys here)
+   */
+  private static async clearAppData(): Promise<void> {
+    if (typeof localStorage !== 'undefined') {
+      // Clear app-specific keys (add more as needed)
+      const appKeys = [
+        'user-profile',
+        'user-session', 
+        'dashboard-cache',
+        '@microloan-app'
+      ];
+      
+      appKeys.forEach(key => {
+        localStorage.removeItem(key);
+      });
+    }
+  }
+
+  /**
+   * Force app reload with clean URL
+   */
+  private static forceAppReload(): void {
+    if (typeof window !== 'undefined') {
+      // Clear any hash or query params for clean reload
+      window.location.href = window.location.origin;
+    }
   }
 }

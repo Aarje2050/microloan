@@ -13,14 +13,14 @@ import { PaymentHistoryScreen } from '../screens/borrower/PaymentHistoryScreen';
 import { DocumentsScreen } from '../screens/borrower/DocumentsScreen';
 import { BorrowerProfileScreen } from '../screens/borrower/BorrowerProfileScreen';
 import { BorrowerTabParamList } from '../types';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { UniversalTabWrapper, getUniversalTabBarOptions } from '../components/common/UniversalTabWrapper';
 
 
 const Tab = createBottomTabNavigator<BorrowerTabParamList>();
 
 export const BorrowerTabNavigator: React.FC = () => {
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
+    <UniversalTabWrapper>
     <Tab.Navigator
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
@@ -101,6 +101,6 @@ export const BorrowerTabNavigator: React.FC = () => {
         }}
       />
     </Tab.Navigator>
-    </SafeAreaView>
+    </UniversalTabWrapper>
   );
 };

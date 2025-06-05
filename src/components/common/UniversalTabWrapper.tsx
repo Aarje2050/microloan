@@ -1,35 +1,68 @@
 // src/components/common/UniversalTabWrapper.tsx
-// Universal wrapper that makes any tab navigator work perfectly on web mobile
+// FIXED - Actually working tab wrapper with bottom navigation fix
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Platform, StatusBar } from 'react-native';
+import { Platform } from 'react-native';
 
 interface UniversalTabWrapperProps {
   children: React.ReactNode;
 }
 
 export const UniversalTabWrapper: React.FC<UniversalTabWrapperProps> = ({ children }) => {
-  return (
-    <>
-      {/* Status bar configuration for native feel */}
-      <StatusBar 
-        barStyle="dark-content" 
-        backgroundColor="white"
-        translucent={false}
-      />
+  
+  // Fix bottom navigation on web/iOS
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      const styles = document.createElement('style');
+      styles.innerHTML = `
+        /* FORCE bottom navigation to show on iOS Safari */
+        .react-navigation-tab-bar, 
+        [role="tablist"],
+        div[style*="position: absolute"][style*="bottom: 0"] {
+          position: fixed !important;
+          bottom: 0 !important;
+          left: 0 !important;
+          right: 0 !important;
+          z-index: 999 !important;
+          background: white !important;
+          border-top: 1px solid #e0e0e0 !important;
+          height: 80px !important;
+          display: flex !important;
+          visibility: visible !important;
+          opacity: 1 !important;
+          max-width: 430px !important;
+          margin: 0 auto !important;
+          box-shadow: 0 -2px 10px rgba(0,0,0,0.1) !important;
+        }
+
+        /* Content spacing for bottom navigation */
+        body, #root, [data-reactroot] {
+          padding-bottom: 90px !important;
+        }
+      `;
       
-      <SafeAreaView 
-        style={{ flex: 1, backgroundColor: '#f5f5f5' }} 
-        edges={Platform.OS === 'web' ? ['top'] : ['top', 'bottom']}
-      >
-        {children}
-      </SafeAreaView>
-    </>
+      document.head.appendChild(styles);
+      
+      return () => {
+        if (styles.parentNode) {
+          styles.parentNode.removeChild(styles);
+        }
+      };
+    }
+  }, []);
+
+  return (
+    <SafeAreaView 
+      style={{ flex: 1 }} 
+      edges={Platform.OS === 'web' ? ['top'] : ['top', 'bottom']}
+    >
+      {children}
+    </SafeAreaView>
   );
 };
 
-// Universal tab bar styling configuration
+// Universal tab bar styling
 export const getUniversalTabBarOptions = () => ({
   tabBarActiveTintColor: '#2196f3',
   tabBarInactiveTintColor: '#9e9e9e',
@@ -44,12 +77,6 @@ export const getUniversalTabBarOptions = () => ({
     bottom: 0,
     left: 0,
     right: 0,
-    // Add shadow for native feel
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 8,
   },
   tabBarLabelStyle: {
     fontSize: 11,
@@ -59,24 +86,4 @@ export const getUniversalTabBarOptions = () => ({
   tabBarItemStyle: {
     paddingVertical: 4,
   },
-});
-
-// Universal screen options for native feel
-export const getUniversalScreenOptions = () => ({
-  headerShown: false,
-  // Add native-like transitions
-  cardStyleInterpolator: Platform.OS === 'web' 
-    ? undefined 
-    : ({ current, layouts }: any) => ({
-        cardStyle: {
-          transform: [
-            {
-              translateX: current.progress.interpolate({
-                inputRange: [0, 1],
-                outputRange: [layouts.screen.width, 0],
-              }),
-            },
-          ],
-        },
-      }),
 });
