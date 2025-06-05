@@ -1,12 +1,11 @@
 // src/navigation/SuperAdminTabNavigator.tsx
-// UPDATED - Tab navigation for Super Admin role with AllLoansScreen integration
-// ENTERPRISE SAFE AREA FIX - Proper handling for all iPhone models including notched devices
-// Provides access to all administrative functions with enterprise-grade screens
+// FIXED - Mobile web navigation with proper bottom tab visibility
 
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Platform } from 'react-native';
 import { SuperAdminTabParamList } from '../types';
 
 // Import implemented screens
@@ -14,16 +13,16 @@ import { SuperAdminDashboardScreen } from '../screens/superadmin/SuperAdminDashb
 import { ManageLendersScreen } from '../screens/superadmin/ManageLendersScreen';
 import { AllLoansScreen } from '../screens/superadmin/AllLoansScreen';
 import { AnalyticsScreen } from '../screens/superadmin/AnalyticsScreen';
-
-// Import placeholder for remaining screens
-import { PlaceholderScreen } from '../components/common';
 import { SettingsScreen } from '../screens/superadmin';
 
 const Tab = createBottomTabNavigator<SuperAdminTabParamList>();
 
 export const SuperAdminTabNavigator: React.FC = () => {
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
+    <SafeAreaView 
+      style={{ flex: 1 }} 
+      edges={Platform.OS === 'web' ? ['top'] : ['top', 'bottom']}
+    >
       <Tab.Navigator
         screenOptions={({ route }) => ({
           headerShown: false,
@@ -58,14 +57,21 @@ export const SuperAdminTabNavigator: React.FC = () => {
             backgroundColor: 'white',
             borderTopWidth: 1,
             borderTopColor: '#e0e0e0',
-            paddingTop: 5,
-            height: 60, // Fixed height for consistency
-            paddingBottom: 1
+            paddingTop: 8,
+            paddingBottom: Platform.OS === 'web' ? 8 : 4,
+            height: Platform.OS === 'web' ? 80 : 85, // More height for web mobile
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
           },
           tabBarLabelStyle: {
-            fontSize: 12,
-            fontWeight: '500',
-            paddingBottom: 2,
+            fontSize: 11,
+            fontWeight: '600',
+            marginBottom: Platform.OS === 'web' ? 4 : 2,
+          },
+          tabBarItemStyle: {
+            paddingVertical: 4,
           },
         })}
       >
@@ -85,7 +91,6 @@ export const SuperAdminTabNavigator: React.FC = () => {
         }}
       />
 
-      {/* UPDATED: Now using AllLoansScreen instead of PlaceholderScreen */}
       <Tab.Screen
         name="AllLoans"
         component={AllLoansScreen}
@@ -94,7 +99,6 @@ export const SuperAdminTabNavigator: React.FC = () => {
         }}
       />
       
-      {/* UPDATED: Now using AnalyticsScreen instead of PlaceholderScreen */}
       <Tab.Screen
         name="Analytics"
         component={AnalyticsScreen}
@@ -103,7 +107,6 @@ export const SuperAdminTabNavigator: React.FC = () => {
         }}
       />
       
-      {/* REMAINING: Settings Screen - Only one left to implement */}
       <Tab.Screen
         name="Settings"
         component={SettingsScreen}

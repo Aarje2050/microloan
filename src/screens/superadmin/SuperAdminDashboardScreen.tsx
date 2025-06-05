@@ -26,24 +26,36 @@ import { AnalyticsService } from '../../services/analytics/analyticsService';
 import { AuthService } from '../../services/auth/authService';
 import { SuperAdminDashboard, LenderPerformance } from '../../types';
 import { formatCurrency, formatDate } from '../../utils';
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback } from 'react';
+import { Platform } from 'react-native';
+
 
 export const SuperAdminDashboardScreen: React.FC = () => {
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
 
-  // Fetch dashboard data using React Query for caching and real-time updates
-  const { 
-    data: dashboardData, 
-    isLoading, 
-    error, 
-    refetch 
-  } = useQuery({
-    queryKey: ['superAdminDashboard'],
-    queryFn: () => AnalyticsService.getSuperAdminDashboard(),
-    refetchInterval: 30000, // Refresh every 30 seconds for real-time data
-    staleTime: 10000, // Consider data stale after 10 seconds
-  });
-
+  // ALSO UPDATE THE useQuery CONFIGURATION
+const { 
+  data: dashboardData, 
+  isLoading, 
+  error, 
+  refetch 
+} = useQuery({
+  queryKey: ['superAdminDashboard'],
+  queryFn: () => AnalyticsService.getSuperAdminDashboard(),
+  refetchInterval: 30000, // Refresh every 30 seconds for real-time data
+  staleTime: 5000, // REDUCED - Consider data stale after 5 seconds for web
+  refetchOnWindowFocus: true, // ADDED - Refetch when window gains focus
+  refetchOnMount: true, // ADDED - Always refetch on mount
+});
+  
+  useFocusEffect(
+    useCallback(() => {
+      // Refetch data when tab comes into focus
+      refetch();
+    }, [refetch])
+  );
   /**
    * Handle pull-to-refresh functionality
    */
@@ -114,29 +126,54 @@ export const SuperAdminDashboardScreen: React.FC = () => {
     );
   };
 
-  // Show loading state
-  if (isLoading && !dashboardData) {
+  // Show loading state - FIXED CONDITION
+  if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
         <Ionicons name="analytics" size={48} color="#2196f3" />
         <Text style={styles.loadingText}>Loading Dashboard...</Text>
+        <View style={styles.loadingDots}>
+          <Text style={styles.loadingDot}>•</Text>
+          <Text style={styles.loadingDot}>•</Text>
+          <Text style={styles.loadingDot}>•</Text>
+        </View>
       </View>
     );
   }
 
-  // Show error state
-  if (error || !dashboardData?.success) {
+  // Show error state - FIXED CONDITION
+  if (error) {
     return (
       <View style={styles.errorContainer}>
-        <Ionicons name="alert-circle" size={48} color="#f44336" />
-        <Text style={styles.errorText}>Failed to load dashboard</Text>
+        <Ionicons name="airplane" size={48} color="#f44336" />
+        <Text style={styles.errorText}>Connection Problem</Text>
         <Text style={styles.errorSubtext}>
-          {dashboardData?.error || 'Please check your connection and try again'}
+          Please check your internet connection and try again
         </Text>
         <Button
-          title="Retry"
+          title="Retry Connection"
           onPress={() => refetch()}
           buttonStyle={styles.retryButton}
+          icon={<Ionicons name="refresh" size={16} color="white" style={{ marginRight: 8 }} />}
+        />
+      </View>
+    );
+  }
+
+  // Show no data state - NEW CONDITION
+  if (!dashboardData || !dashboardData.success) {
+    return (
+      <View style={styles.errorContainer}>
+        <Ionicons name="document-text-outline" size={48} color="#ff9800" />
+        <Text style={styles.errorText}>No Data Available</Text>
+        <Text style={styles.errorSubtext}>
+          Dashboard data is not available at the moment
+        </Text>
+        <Button
+          title="Refresh Data"
+          onPress={() => refetch()}
+          buttonStyle={[styles.retryButton, { backgroundColor: '#ff9800' }]}
+          icon={<Ionicons name="refresh" size={16} color="white" style={{ marginRight: 8 }} />}
         />
       </View>
     );
@@ -390,10 +427,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+    paddingBottom: Platform.OS === 'web' ? 90 : 95, // Space for bottom tabs
+
   },
   content: {
     padding: 16,
     paddingTop: 10,
+    paddingBottom: 20, // Extra space at bottom
+
   },
   loadingContainer: {
     flex: 1,
@@ -656,4 +697,20 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: 'center',
   },
+  // ADD THESE NEW STYLES TO THE EXISTING STYLES OBJECT
+
+  loadingDots: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  loadingDot: {
+    fontSize: 20,
+    color: '#2196f3',
+    marginHorizontal: 4,
+    opacity: 0.7,
+  },
+
+  
 });
