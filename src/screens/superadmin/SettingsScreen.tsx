@@ -23,6 +23,8 @@ import { useMutation } from '@tanstack/react-query';
 import { AuthService } from '../../services/auth/authService';
 import { supabase } from '../../services/supabase/config';
 import { User } from '../../types';
+import { UniversalSignOutService } from '../../services/auth/universalSignOutService';
+
 
 export const SettingsScreen: React.FC = () => {
   
@@ -112,24 +114,8 @@ export const SettingsScreen: React.FC = () => {
    * Handle logout
    */
   const handleLogout = () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Sign Out', 
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await AuthService.signOut();
-            } catch (error) {
-              console.error('Logout error:', error);
-            }
-          }
-        }
-      ]
-    );
+    UniversalSignOutService.handleSignOut();
+
   };
 
   return (

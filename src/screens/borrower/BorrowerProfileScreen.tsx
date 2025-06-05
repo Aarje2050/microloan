@@ -28,6 +28,8 @@ import { UserService } from '../../services/users/userService';
 import { supabase } from '../../services/supabase/config';
 import { User } from '../../types';
 import { formatCurrency, formatDate } from '../../utils';
+import { UniversalSignOutService } from '../../services/auth/universalSignOutService';
+
 
 interface EditProfileForm {
   full_name: string;
@@ -368,24 +370,8 @@ export const BorrowerProfileScreen: React.FC = () => {
 
   // Handle logout
   const handleLogout = () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Sign Out', 
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await AuthService.signOut();
-            } catch (error) {
-              console.error('Logout error:', error);
-            }
-          }
-        }
-      ]
-    );
+    UniversalSignOutService.handleSignOut();
+
   };
 
   /**

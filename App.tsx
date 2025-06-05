@@ -9,6 +9,8 @@ import { NavigationContainer } from '@react-navigation/native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { MobileWebStyles } from './src/components/common/MobileWebStyles';
+import { NativeMobileEnhancement } from './src/components/common/NativeMobileEnhancement';
+
 
 
 // Import our services and types
@@ -146,6 +148,7 @@ export default function App() {
 
   return (
     <>
+    <NativeMobileEnhancement />
      <MobileWebStyles /> {/* Add this line */}
     <QueryClientProvider client={queryClient}>
       <SafeAreaProvider>

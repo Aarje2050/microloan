@@ -5,8 +5,9 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { View } from 'react-native';
+import { UniversalTabWrapper, getUniversalTabBarOptions } from '../components/common/UniversalTabWrapper';
+
 
 import { LenderTabParamList } from '../types';
 import { 
@@ -20,7 +21,7 @@ const Tab = createBottomTabNavigator<LenderTabParamList>();
 
 export const LenderTabNavigator: React.FC = () => {
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
+    <UniversalTabWrapper>
       <Tab.Navigator
         screenOptions={({ route }) => ({
           headerShown: false,
@@ -92,6 +93,6 @@ export const LenderTabNavigator: React.FC = () => {
           }}
         />
       </Tab.Navigator>
-    </SafeAreaView>
+      </UniversalTabWrapper>
   );
 };

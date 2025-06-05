@@ -4,7 +4,6 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Platform } from 'react-native';
 import { SuperAdminTabParamList } from '../types';
 
@@ -14,15 +13,13 @@ import { ManageLendersScreen } from '../screens/superadmin/ManageLendersScreen';
 import { AllLoansScreen } from '../screens/superadmin/AllLoansScreen';
 import { AnalyticsScreen } from '../screens/superadmin/AnalyticsScreen';
 import { SettingsScreen } from '../screens/superadmin';
+import { UniversalTabWrapper, getUniversalTabBarOptions } from '../components/common/UniversalTabWrapper';
 
 const Tab = createBottomTabNavigator<SuperAdminTabParamList>();
 
 export const SuperAdminTabNavigator: React.FC = () => {
   return (
-    <SafeAreaView 
-      style={{ flex: 1 }} 
-      edges={Platform.OS === 'web' ? ['top'] : ['top', 'bottom']}
-    >
+    <UniversalTabWrapper>
       <Tab.Navigator
         screenOptions={({ route }) => ({
           headerShown: false,
@@ -116,6 +113,6 @@ export const SuperAdminTabNavigator: React.FC = () => {
       />
        
       </Tab.Navigator>
-    </SafeAreaView>
+      </UniversalTabWrapper>
   );
 };
