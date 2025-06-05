@@ -1,0 +1,68 @@
+src
+├── components
+│   ├── common
+│   │   ├── PlaceholderScreen.tsx
+│   │   └── index.ts
+│   ├── forms
+│   └── layouts
+├── constants
+├── hooks
+├── navigation
+│   ├── AppNavigator.tsx
+│   ├── AuthNavigator.tsx
+│   ├── BorrowerStackNavigator.tsx
+│   ├── BorrowerTabNavigator.tsx
+│   ├── LenderStackNavigator.tsx
+│   ├── LenderTabNavigator.tsx
+│   └── SuperAdminTabNavigator.tsx
+├── screens
+│   ├── auth
+│   │   ├── EmailVerificationPendingScreen.tsx
+│   │   ├── ForgotPasswordScreen.tsx
+│   │   ├── LoginScreen.tsx
+│   │   └── RegisterScreen.tsx
+│   ├── borrower
+│   │   ├── BorrowerDashboardScreen.tsx
+│   │   ├── BorrowerMyLoansScreen.tsx
+│   │   ├── BorrowerProfileScreen.tsx
+│   │   ├── DocumentsScreen.tsx
+│   │   ├── EMIScheduleScreen.tsx
+│   │   ├── PaymentHistoryScreen.tsx
+│   │   └── index.ts
+│   ├── lender
+│   │   ├── CreateLoanWizardScreen.tsx
+│   │   ├── EMIManagementScreen.tsx
+│   │   ├── LenderDashboardScreen.tsx
+│   │   ├── LenderProfileScreen.tsx
+│   │   ├── ManageBorrowersScreen.tsx
+│   │   ├── MyLoansScreen.tsx
+│   │   ├── RecordPaymentScreen.tsx
+│   │   └── index.ts
+│   └── superadmin
+│       ├── AllLoansScreen.tsx
+│       ├── AnalyticsScreen.tsx
+│       ├── ManageLendersScreen.tsx
+│       ├── SettingsScreen.tsx
+│       ├── SuperAdminDashboardScreen.tsx
+│       └── index.ts
+├── services
+│   ├── analytics
+│   │   ├── analyticsService.ts
+│   │   └── index.ts
+│   ├── auth
+│   │   ├── authService.ts
+│   │   └── emailVerificationService.ts
+│   ├── calculations
+│   │   └── emiCalculationService.ts
+│   ├── loans
+│   │   └── loanService.ts
+│   ├── supabase
+│   │   └── config.ts
+│   └── users
+│       ├── index.ts
+│       └── userService.ts
+├── types
+│   └── index.ts
+└── utils
+    ├── formatters.ts
+    └── index.ts

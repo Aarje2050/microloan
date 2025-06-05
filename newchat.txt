@@ -1,0 +1,230 @@
+# MicroLoan Manager - Complete Project Context Summary
+
+## 🎯 PROJECT OVERVIEW
+**Enterprise-grade microloan management mobile application** built with React Native + Expo + Supabase. Serves three user types with role-based access control and comprehensive loan management workflows.
+
+### User Roles & Workflows:
+- **Super Admin (Project Owner)**: Manages lenders, oversees all operations, analytics
+- **Lenders (Loan Officers)**: Create borrowers, manage loans, record payments, track EMIs
+- **Borrowers (Customers)**: View loans, track EMIs, make payments, manage documents
+
+---
+
+## 🏗️ CURRENT WORKING STATE (PHASE 1 COMPLETE)
+
+### ✅ IMPLEMENTED & TESTED:
+- **Authentication System**: Role-based login/registration with email verification
+- **Database Architecture**: PostgreSQL with RLS, 7 core tables, proper relationships
+- **Super Admin Access**: `aarje2050@gmail.com` / `Rajesh@321` (immediate login)
+- **Borrower Registration**: Self-registration → email verification → login
+- **Lender Approval Workflow**: Registration → email verification → admin approval → login
+- **Lender Management Interface**: Super admin can approve/reject pending lenders
+- **Hybrid Storage Solution**: SecureStore + AsyncStorage for auth tokens >2048 bytes
+- **Error-Free RLS Policies**: Fixed infinite recursion issues
+
+### 🔐 AUTHENTICATION FLOWS:
+```
+Super Admin: Login → Immediate access (no verification needed)
+Borrower: Register → Email verification → Login  
+Lender: Register → Email verification → Admin approval → Login
+```
+
+---
+
+## 🗄️ DATABASE ARCHITECTURE
+
+### Core Tables (PostgreSQL + Supabase):
+```sql
+users (id, email, role, phone, full_name, active, email_verified, pending_approval)
+user_profiles (user_id, avatar_url, address, kyc_status)
+borrowers (user_id, lender_id, credit_score, employment_type, monthly_income)
+loans (borrower_id, loan_number, principal_amount, interest_rate, tenure_months, status)
+emis (loan_id, emi_number, due_date, amount, status, paid_amount)
+payments (loan_id, amount, payment_date, payment_method, recorded_by)
+documents (borrower_id, document_type, file_url, verification_status)
+```
+
+### 🔥 CRITICAL DATABASE RULES:
+- **ID Matching**: `auth.users.id` MUST match `users.id` (foreign key dependencies)
+- **RLS Policies**: Use roles `anon`, `authenticated`, `service_role` (NOT `public`)
+- **No Recursive Queries**: RLS policies must NEVER query same table they're applied to
+- **Service Functions**: Use `SECURITY DEFINER` functions to bypass RLS when needed
+
+### Working Database Functions:
+- `approve_lender(email)`: Activates pending lenders
+- `sync_email_verification()`: Syncs auth.users verification to users table
+- `create_user_profile()`: Bypasses RLS for user creation
+
+---
+
+## 📱 TECHNICAL STACK
+
+### Frontend:
+- **React Native + Expo SDK 53** (TypeScript strict mode)
+- **React Query v5** + React Context (state management)
+- **React Native Elements 3.4.3** (UI components)
+- **React Navigation 6** (type-safe navigation)
+
+### Backend:
+- **Supabase** (PostgreSQL + Auth + Real-time)
+- **Row Level Security** (RLS) for data access control
+- **Hybrid Storage**: SecureStore + AsyncStorage
+
+### Project Structure:
+```
+src/
+├── screens/ (role-specific: auth/, superadmin/, lender/, borrower/)
+├── services/ (business logic: auth/, users/, loans/, analytics/)
+├── navigation/ (role-based routing)
+├── components/ (reusable UI components)
+├── types/ (TypeScript definitions)
+├── utils/ (formatters, helpers)
+└── constants/ (app configurations)
+```
+
+---
+
+## 🚦 CURRENT STATUS & NEXT PHASES
+
+### ✅ PHASE 1 COMPLETE (Foundation):
+- Authentication system with email verification
+- Role-based navigation and access control
+- Lender approval workflow in ManageLendersScreen
+- Clean database with only super admin for testing
+
+### 🔜 PHASE 2 (Next Priority - Dashboard Content):
+- **Lender Dashboards**: Create/manage borrowers, loan creation wizard
+- **Super Admin Analytics**: System metrics, lender performance tracking
+- **Borrower Dashboards**: Loan overview, EMI schedules, payment history
+
+### 🔜 PHASE 3 (Core Loan Operations):
+- EMI calculation engine and payment tracking
+- Document upload/verification system
+- Advanced analytics and reporting
+
+### 🔜 PHASE 4 (Advanced Features):
+- Push notifications for EMI reminders
+- Offline data synchronization
+- Export functionality (PDF reports)
+
+### 💡 FUTURE CONSIDERATION (Phase 5):
+- Multi-tier lending system (Super Admin → Lender → Borrower capital flow)
+- Can be added later without conflicts to existing architecture
+
+---
+
+## 🛡️ SECURITY & BEST PRACTICES ESTABLISHED
+
+### Authentication Security:
+- **JWT-based auth** with automatic token refresh
+- **Role-based access control** at database level (RLS)
+- **Email verification** required for all users except super admin
+- **Admin approval** required for lenders before activation
+
+### Database Security:
+- **Row Level Security** enabled on all tables
+- **Soft deletes** (deleted_at timestamps) instead of hard deletes
+- **Audit trails** with auto-timestamps and user tracking
+- **Input validation** at both client and server level
+
+### Code Quality Standards:
+- **TypeScript strict mode** for type safety
+- **Single responsibility** components and services
+- **Enterprise error handling** with user-friendly messages
+- **React Query** for efficient data fetching and caching
+
+---
+
+## ⚠️ COMMON ISSUES & SOLUTIONS
+
+### RLS Policy Issues:
+- **Problem**: Infinite recursion in policies
+- **Solution**: Never query same table from within its own RLS policy
+
+### Authentication Errors:
+- **Problem**: "User profile not found" 
+- **Solution**: Check ID matching between auth.users and users table
+
+### Storage Issues:
+- **Problem**: Auth tokens >2048 bytes fail in SecureStore
+- **Solution**: Use hybrid SecureStore + AsyncStorage approach
+
+### Email Verification:
+- **Problem**: Dual emails during registration
+- **Solution**: Use Supabase's built-in verification, disable custom emails
+
+---
+
+## 🧪 TESTING ENVIRONMENT
+
+### Current Test Data:
+- **Clean database** with only super admin: `aarje2050@gmail.com`
+- **Development mode**: `npx expo start --tunnel` for iPhone testing
+- **Email verification**: Works via Supabase's built-in system
+
+### Test Workflows:
+1. **Super Admin**: Login immediately, manage lenders, approve applications
+2. **Borrower Registration**: Complete self-service flow
+3. **Lender Registration**: Email verification + admin approval workflow
+
+---
+
+## 📋 DEVELOPMENT COMMANDS
+
+### Database Queries:
+```sql
+-- Check user status
+SELECT email, role, active, email_verified, pending_approval FROM users WHERE email = 'email@example.com';
+
+-- Approve lender manually  
+SELECT approve_lender('email@example.com');
+
+-- Clean test data (keep only super admin)
+DELETE FROM users WHERE email != 'aarje2050@gmail.com';
+```
+
+### Development:
+```bash
+npx expo start --tunnel  # For iPhone testing
+npm run type-check       # TypeScript validation
+```
+
+---
+
+## 🎯 KEY SUCCESS METRICS
+
+### Phase 1 Achieved:
+- ✅ Zero compilation errors
+- ✅ All authentication flows working
+- ✅ Role-based navigation functional
+- ✅ Database relationships intact
+- ✅ Email verification system operational
+
+### Phase 2 Target:
+- Real-time dashboard data display
+- Functional CRUD operations for all entities
+- EMI calculation engine working
+- Professional UI/UX across all screens
+
+---
+
+## 🚀 NEXT DEVELOPMENT FOCUS
+
+### Immediate Priorities:
+1. **Implement dashboard content** (replace placeholder screens)
+2. **Build borrower creation flow** for lenders
+3. **Create loan creation wizard** with EMI calculations
+4. **Add payment recording interface**
+
+### Architecture Ready For:
+- Multi-tenant scaling
+- Real-time updates
+- Advanced analytics
+- Document management
+- Notification systems
+
+---
+
+**STATUS**: Phase 1 Foundation Complete ✅ | Ready for Phase 2 Dashboard Development
+**AUTHENTICATION**: Super admin access working | Approval workflows operational
+**DATABASE**: Clean state with enterprise-grade architecture and security
