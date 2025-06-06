@@ -28,6 +28,7 @@ import { UserService, CreateUserForm, UpdateUserForm } from '../../services/user
 import { supabase } from '../../services/supabase/config';
 import { User, UserRole } from '../../types';
 import { formatDate } from '../../utils';
+import 'react-native-get-random-values'; // Add this import
 
 interface LenderFormData {
   full_name: string;
@@ -36,6 +37,7 @@ interface LenderFormData {
   password: string;
   address: string;
 }
+
 
 export const ManageLendersScreen: React.FC = () => {
   const queryClient = useQueryClient();
@@ -109,24 +111,69 @@ export const ManageLendersScreen: React.FC = () => {
     refetchInterval: 30000,
   });
 
-  // Existing create lender mutation
   const createLenderMutation = useMutation({
-    mutationFn: (userData: CreateUserForm) => UserService.createUser(userData),
-    onSuccess: (result) => {
-      if (result.success) {
-        queryClient.invalidateQueries({ queryKey: ['lenders'] });
-        setShowAddModal(false);
-        resetForm();
-        Alert.alert('Success', 'Lender created successfully!');
-      } else {
-        Alert.alert('Error', result.error || 'Failed to create lender');
+    mutationFn: async (userData: CreateUserForm) => {
+      console.log('Starting user creation...', userData.email);
+      
+      const userId = crypto.randomUUID();
+      
+      // Just create user record - no auth complications
+      const { data, error } = await supabase
+        .from('users')
+        .insert({
+          id: userId,
+          email: userData.email,
+          full_name: userData.full_name,
+          phone: userData.phone,
+          role: 'lender',
+          active: false,
+          email_verified: false,
+          pending_approval: true
+        })
+        .select()
+        .single();
+  
+      if (error) {
+        console.error('Insert error:', error);
+        throw error;
       }
+  
+      console.log('User created:', data);
+  
+      // Create profile
+      await supabase
+        .from('user_profiles')
+        .insert({
+          user_id: userId,
+          address: userData.address,
+          kyc_status: 'pending'
+        });
+  
+      // Send password setup email (don't fail if this fails)
+      try {
+        // In mutation, replace email line:
+await supabase.auth.resetPasswordForEmail(userData.email, {
+  redirectTo: `${window.location.origin}/auth/login`
+});
+      } catch (emailError) {
+        console.warn('Email failed but user created:', emailError);
+      }
+  
+      return { success: true, data };
+    },
+    onSuccess: (result) => {
+      console.log('Success callback triggered');
+      queryClient.invalidateQueries({ queryKey: ['lenders'] });
+      setShowAddModal(false);
+      resetForm();
+      Alert.alert('Success', 'Lender created! They will receive password setup email.');
     },
     onError: (error) => {
-      Alert.alert('Error', 'An unexpected error occurred');
-      console.error('Create lender error:', error);
+      console.error('Mutation error:', error);
+      Alert.alert('Error', error.message);
     }
   });
+
 
   // Existing update lender mutation
   const updateLenderMutation = useMutation({
@@ -223,32 +270,37 @@ export const ManageLendersScreen: React.FC = () => {
   /**
    * Validate form data
    */
-  const validateForm = (): boolean => {
-    const errors: Partial<LenderFormData> = {};
+  // In ManageLendersScreen.tsx, replace validateForm function:
+const validateForm = (): boolean => {
+  const errors: Partial<LenderFormData> = {};
 
-    if (!formData.full_name.trim()) {
-      errors.full_name = 'Full name is required';
+  if (!formData.full_name.trim()) {
+    errors.full_name = 'Full name is required';
+  }
+
+  if (!formData.email.trim()) {
+    errors.email = 'Email is required';
+  } else {
+    // Strict email validation
+    const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
+    if (!emailRegex.test(formData.email.trim())) {
+      errors.email = 'Please enter a valid email address (e.g., user@example.com)';
     }
+  }
 
-    if (!formData.email.trim()) {
-      errors.email = 'Email is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      errors.email = 'Please enter a valid email';
-    }
+  if (!formData.phone.trim()) {
+    errors.phone = 'Phone number is required';
+  }
 
-    if (!formData.phone.trim()) {
-      errors.phone = 'Phone number is required';
-    }
+  // if (!showEditModal && !formData.password) {
+  //   errors.password = 'Password is required';
+  // } else if (!showEditModal && formData.password.length < 6) {
+  //   errors.password = 'Password must be at least 6 characters';
+  // }
 
-    if (!showEditModal && !formData.password) {
-      errors.password = 'Password is required';
-    } else if (!showEditModal && formData.password.length < 6) {
-      errors.password = 'Password must be at least 6 characters';
-    }
-
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
+  setFormErrors(errors);
+  return Object.keys(errors).length === 0;
+};
 
   /**
    * Handle create lender

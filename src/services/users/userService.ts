@@ -38,15 +38,16 @@ export interface UserListFilters {
 
 export class UserService {
 
-  // REPLACE your existing createUser method with this enhanced version
+// REPLACE your existing createUser method in userService.ts with this:
+
 /**
- * Create new user with email verification workflow
+ * Create new user with email verification workflow - ENTERPRISE VERSION
  * @param userData User creation data
  * @returns Promise with created user data
  */
 static async createUser(userData: CreateUserForm): Promise<ApiResponse<User>> {
   try {
-    // Validate input data
+    // Validate input data first
     const validation = this.validateUserData(userData);
     if (!validation.isValid) {
       return {
@@ -55,41 +56,46 @@ static async createUser(userData: CreateUserForm): Promise<ApiResponse<User>> {
       };
     }
 
-    // Check if email already exists
-    const { data: existingUser } = await supabase
-      .from('users')
-      .select('email, active, email_verified')
-      .eq('email', userData.email.toLowerCase())
-      .is('deleted_at', null)
-      .single();
+    // Step 1: Use secure database function to validate email and check existence
+    const { data: validationResult, error: validationError } = await supabase
+      .rpc('create_user_with_validation', {
+        p_email: userData.email.toLowerCase(),
+        p_full_name: userData.full_name,
+        p_phone: userData.phone,
+        p_role: userData.role,
+        p_address: userData.address || ''
+      });
 
-    if (existingUser) {
-      if (!existingUser.email_verified) {
-        return {
-          success: false,
-          error: 'An account with this email exists but is not verified. Please check your email for verification instructions.'
-        };
-      }
-      
+    if (validationError) {
+      console.error('Validation function error:', validationError);
       return {
         success: false,
-        error: 'Email address is already registered.'
+        error: 'User validation failed. Please try again.'
       };
     }
 
-    // Create auth user first
+    if (!validationResult.success) {
+      return {
+        success: false,
+        error: validationResult.error
+      };
+    }
+
+    // Step 2: Create auth user 
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: userData.email.toLowerCase(),
       password: userData.password,
       options: {
         data: {
           full_name: userData.full_name,
-          phone: userData.phone
+          phone: userData.phone,
+          role: userData.role
         }
       }
     });
 
     if (authError) {
+      console.error('Auth signup error:', authError);
       return {
         success: false,
         error: this.formatAuthError(authError.message)
@@ -103,57 +109,93 @@ static async createUser(userData: CreateUserForm): Promise<ApiResponse<User>> {
       };
     }
 
-    // Create user record in our users table (INACTIVE by default)
-    const { data: newUser, error: userError } = await supabase
-      .from('users')
-      .insert({
-        id: authData.user.id,
-        email: userData.email.toLowerCase(),
-        role: userData.role,
-        phone: userData.phone,
-        full_name: userData.full_name,
-        active: false, // Start as inactive
-        email_verified: false, // Not verified yet
-        pending_approval: userData.role === 'lender' // Lenders need approval
-      })
-      .select()
-      .single();
+    // Step 3: Use secure database function to create user profile
+    const { data: profileResult, error: profileError } = await supabase
+      .rpc('create_user_profile_secure', {
+        p_user_id: authData.user.id,
+        p_email: userData.email.toLowerCase(),
+        p_full_name: userData.full_name,
+        p_phone: userData.phone,
+        p_role: userData.role,
+        p_address: userData.address || ''
+      });
 
-    if (userError) {
-      console.warn('User profile creation failed:', userError);
+    if (profileError) {
+      console.error('Profile creation error:', profileError);
+      
+      // Clean up auth user if profile creation fails
+      try {
+        await supabase.auth.admin.deleteUser(authData.user.id);
+      } catch (cleanupError) {
+        console.error('Cleanup error:', cleanupError);
+      }
+      
       return {
         success: false,
         error: 'Failed to create user profile. Please try again.'
       };
     }
 
-    // Create user profile with address
-    await supabase
-      .from('user_profiles')
-      .insert({
-        user_id: authData.user.id,
-        address: userData.address || '',
-        kyc_status: userData.role === 'super_admin' ? 'verified' : 'pending'
-      });
+    if (!profileResult.success) {
+      // Clean up auth user if profile creation fails
+      try {
+        await supabase.auth.admin.deleteUser(authData.user.id);
+      } catch (cleanupError) {
+        console.error('Cleanup error:', cleanupError);
+      }
+      
+      return {
+        success: false,
+        error: profileResult.error || 'Failed to create user profile.'
+      };
+    }
 
-    // Send verification email
-    const emailResult = await EmailVerificationService.sendVerificationEmail(userData.email);
-    
-    if (!emailResult.success) {
-      console.error('Failed to send verification email:', emailResult.error);
-      // Don't fail the registration, just log the error
+    // Step 4: Send verification email (optional, don't fail if this fails)
+    try {
+      const emailResult = await EmailVerificationService.sendVerificationEmail(userData.email);
+      console.log('Verification email result:', emailResult);
+    } catch (emailError) {
+      console.warn('Failed to send verification email:', emailError);
+      // Don't fail the registration for email issues
+    }
+
+    // Step 5: Fetch the created user to return
+    const { data: createdUser, error: fetchError } = await supabase
+      .from('users')
+      .select(`
+        *,
+        user_profiles(address, kyc_status, avatar_url)
+      `)
+      .eq('id', authData.user.id)
+      .single();
+
+    if (fetchError) {
+      console.warn('Could not fetch created user:', fetchError);
+      // Return basic user info even if fetch fails
+      return {
+        success: true,
+        data: {
+          id: authData.user.id,
+          email: userData.email.toLowerCase(),
+          full_name: userData.full_name,
+          phone: userData.phone,
+          role: userData.role,
+          active: userData.role === 'super_admin',
+          email_verified: false,
+          pending_approval: userData.role === 'lender',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        } as User
+      };
     }
 
     return {
       success: true,
-      data: {
-        ...newUser,
-        verification_email_sent: emailResult.success
-      } as User
+      data: createdUser as User
     };
 
   } catch (error) {
-    console.error('Create user error:', error);
+    console.error('Create user unexpected error:', error);
     return {
       success: false,
       error: 'An unexpected error occurred while creating user.'

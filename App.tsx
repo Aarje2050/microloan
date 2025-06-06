@@ -5,11 +5,12 @@
 import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer,createNavigationContainerRef } from '@react-navigation/native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { MobileWebStyles } from './src/components/common/MobileWebStyles';
 import { NativeMobileEnhancement } from './src/components/common/NativeMobileEnhancement';
+
 
 
 
@@ -38,6 +39,9 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+// ADD THIS LINE:
+const navigationRef = createNavigationContainerRef();
 
 // Custom theme for React Native Elements
 const theme = {
@@ -102,6 +106,41 @@ export default function App() {
     initializeAuth();
   }, []);
 
+  // Add this useEffect right after your existing initializeAuth useEffect:
+useEffect(() => {
+  // Enterprise navigation state persistence
+  const handleBeforeUnload = () => {
+    if (navigationRef.current) {
+      const state = navigationRef.current.getState();
+      localStorage.setItem('navigation_state', JSON.stringify(state));
+    }
+  };
+
+  const handleFocus = () => {
+    if (!document.hidden) {
+      const savedState = localStorage.getItem('navigation_state');
+      if (savedState && navigationRef.current) {
+        try {
+          const state = JSON.parse(savedState);
+          navigationRef.current.resetRoot(state);
+        } catch (e) {
+          console.warn('Failed to restore navigation state');
+        }
+      }
+    }
+  };
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleFocus);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleFocus);
+    };
+  }
+}, []);
+
   /**
    * Initialize authentication and set up auth state listener
    */
@@ -152,8 +191,8 @@ export default function App() {
      <MobileWebStyles /> {/* Add this line */}
     <QueryClientProvider client={queryClient}>
       <SafeAreaProvider>
-        <NavigationContainer>
-          <View style={styles.container}>
+      <NavigationContainer ref={navigationRef}>
+      <View style={styles.container}>
             <StatusBar style="auto" />
             
             {/* Conditional navigation based on authentication status */}
